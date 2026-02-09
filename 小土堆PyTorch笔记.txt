@@ -1,0 +1,232 @@
+1.PIL/Pillow 是Python里最常用的图像处理库
+Image是它最核心的模块，负责“打开、创建、修改、保存图片
+用法示例：from PIL import Image
+img_path="E:\\vegetable_dataset\\test\\images\\images-57_jpg.rf.41024012b677820a3529d2b16eec1643.jpg"
+img=Image.open(img_path)
+img.show()  #显示图片
+
+Dataset类的使用
+2.from torch.utils.data import Dataset
+上面这行代码可以把它当成一句“我要自己做数据集了”的宣言
+Dataset是PyTorch里“数据集的抽象父类”，只要你想“自己定义一个数据集”，就得继承这个父类Dataset
+自定义数据集 = 继承 torch.utils.data.Dataset + 重写两个方法，这两个方法分别是__len__和__getitem__
+__init__不是Dataset强制要求的，但在实际中几乎一定要写，用来“准备数据”，做一次性的初始化工作
+__init__：一次性准备（只执行一次）
+__getitem__：按需取一条（被反复调用）
+
+3.import os：就是一句“我要和操作系统打交道了”的声明
+os 模块 = Python访问文件系统/环境变量/路径的工具箱
+os.path.join(a路径,b路径,c路径,...)   #根据操作系统自己拼接a,b,c...路径
+os.listdir(dir_path)    #返回目录dir_path下的所有文件名和子目录名
+
+4.数据集可以用内置__add__方法或者直接用'+'号进行拼接
+
+TensorBoard可视化面板的使用
+5.TensorBoard：
+board英译：板，面板，可视化界面
+TensorBoard = 训练过程的“可视化仪表盘”，用来看模型是怎么被训练出来的
+TensorBoard 能看什么（常用到爆的）：
+(1)loss / accuracy 曲线（最常用）
+(2)模型结构图
+(3)参数/梯度分布
+(4)学习率、超参数
+(5)图片/特征图（CV常用）
+导入：from torch.utils.tensorboard import SummaryWriter
+SummaryWriter的作用 = 把训练过程的数据写成文件，让TensorBoard可以读取并可视化
+SummaryWriter是一个类，它定义了写日志的方法和行为（比如 add_image, add_scalar等），
+writer是它的实例对象，通过它可以调用类里的方法，把训练数据记录到日志文件里
+注：tensorboard本来是tensorflow中的，后来被pytorch借过来用
+
+6.utils是pytorch的工具箱
+
+7.在PyCharm中按住ctrl键鼠标移动到要查看的内容上可查看说明，点击可查看详细说明
+
+8.from torch.utils.tensorboard import SummaryWriter
+tensorboard --logdir=logs   #启动TensorBoard，并让它去读取logs文件夹下的事件文件
+简单比喻:
+SummaryWriter   #写日志的人
+logs 文件夹    #日志本
+tensorboard --logdir=logs  #打开仪表盘看日志
+总结：代码里写writer = SummaryWriter("logs")，将日志写到logs文件夹里；命令行写tensorboard --logdir=logs，
+利用tensorboard查看/可视化logs文件，首尾呼应
+注：tensorboard --logdir=logs --port=1234
+--port：改端口，防止6006被占用
+add_scalar：把数字写进TensorBoard，让你用曲线跟踪训练指标变化
+查看参数，有标题tag，纵坐标scalar_value，横坐标global_step(x轴的步数或epoch)等等
+
+9.SummaryWriter类的一个成员方法--add_image()
+作用：把训练过程中某一时刻的图片，写成日志文件保存下来，供TensorBoard之后查看和对比
+它接收的图片类型只能是torch.tensor或者numpy.ndarray类型，而利用PIL处理得到的图片类型不满足要求，所以需要转换
+除了必须满足上述图片类型之外，它的默认读取方式是CHW，如果是别的格式比如HWC，就需要在后面添加参数
+“dataformats='HWC'”，不然会报错，相当于告诉它按什么顺序去读这三个维度
+    图片tittle不变，即使把地址改成别的图片，再把步骤改为下一步，得到的结果不是覆盖而是会追加，之前的还在，
+这正是TensorBoard的日志记录机制的特点，核心原因是TensorBoard是“追加日志”，不是覆盖日志”
+如果想清除之前的，可以通过删除文件夹再重新创建或者创建子文件夹或者创建别的文件夹
+如果只是想清除某一步的，可以通过将步数设为一样重新生成将其覆盖
+注：后续在dataloader中还会用到add_images()，一个step可以将一个batch_size的一批图片上传
+
+10.查看变量x的格式/形状：print(x.shape)
+在from PIL import Image下：
+获得图片数据：img=Image.open(img_path)
+查看图片：img.show()
+
+11.查看源代码：ctrl+单击
+源代码很复杂的话还可以alt+7调出工具窗口查看每个类.c以及各个类对应的方法.m
+
+transforms的使用
+12.transforms其实就是一个模块，简单来说就是工具箱，里面有很多工具可以拿来使用
+transforms的作用就是对数据（尤其是图片）进行预处理或增强，把原始数据转换成模型可以直接使用的格式，
+可以包括类型转换、归一化、尺寸调整、数据增强等操作
+工具箱里面有很多模具（类），需要实例化对象再使用，相当于利用模具打造工具
+使用逻辑：tool = transforms.ToTensor()   #以class ToTensor为例
+        result = tool(input)
+
+13.为什么要将图片/数据转换为tensor类型？
+因为Tensor数据类型包装了神经网络理论基础的一些参数，PyTorch的模型、操作、梯度计算都基于Tensor进行，
+原始图片（PIL Image / NumPy ndarray）不能直接参与GPU运算
+因此，ToTensor工具在PyTorch中是必用的
+
+14.opencv的imread方法：
+import cv2
+img = cv2.imread(img_path)
+作用：把磁盘上的图片读成一个NumPy数组
+返回类型：numpy.ndarray      #type(img)-->numpy.ndarray
+
+15.魔术方法：
+类中定义的函数名如果是双下划线开头结尾，那这就是这个类的魔术方法
+不需要通过"对象.方法()"这种方式来调用
+eg:
+class Person:
+    def __call__(self,name):
+        print("__call__"+"hello"+name)
+person=Person()     #实例化对象
+person("张三")       # 输出：__call__hello张三
+
+16.transforms.Normalize(mean=[R,G,B],std=[R,G,B])的使用
+mean:每个通道的均值
+std:每个通道的标准差
+相当于给出了三个通道的均值，对每个像素点(某行某列)，按顺序对每个通道进行归一化
+因为某行某列的一个像素点实际上是由一个[R,G,B]数组组成
+eg：img_tensor[:, 0, 0] = [0.6, 0.5, 0.4]  #左上角像素点
+img_trans_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+Normalize后：
+R' = (0.6 - 0.485) / 0.229
+G' = (0.5 - 0.456) / 0.224
+B' = (0.4 - 0.406) / 0.225
+
+17.transforms.Resize()的使用
+传入参数：(H,W)，若传入(x)，等价于(x,x)即正方形裁剪
+功能：调整图像的尺寸（高 × 宽）
+输入：PIL/tensor类型的图片
+返回：裁剪后的图片
+
+18.transforms.Compose()的使用
+功能：用来把多个transforms串联起来，输入的图像会按顺序依次经过每个transform
+传参：传入的是列表，列表每个元素是一个transforms，即Compose([transforms1,transforms2,...])
+本质：就是一个Python列表 + 顺序调用
+需要注意的是前一个元素的输出和后一个元素的输入是否类型匹配，不匹配会报错
+
+19.transforms.RandomCrop()的使用
+传入参数：(H,W)，若传入(x)，等价于(x,x)即正方形裁剪
+功能：随机裁剪图像的一块区域
+裁剪框必须小于图片尺寸，否则会报错
+16~19再加上transforms.ToTensor()为transforms的一些常用工具
+
+PyTorch内置数据集
+20.CIFAR-10数据集是torchvision.datasets提供的，PyTorch官方支持的几大内置数据集之一,
+还有很多其他的数据集，自己可以去查，一个数据集元素的格式默认为二元组(PIL图片,类别),
+可以自己设定转化方式将其转化为(tensor图片,类别)
+下载数据集除了调用“torchvision.datasets.数据集名称”之外，需要传入一些参数，可以通过ctrl+p查看
+
+21.python中的序列解包
+序列解包（sequence unpacking）
+就是：把一个“序列”里的多个元素，按顺序一次性赋值给多个变量
+eg：a,b=(1,2)    #a=1,b=2
+
+dataloader/数据加载器的使用
+22.数据集不是一次性全部加载到神经网络中的，而是通过dataloader一批一批的加载，所以一个很重要的参数就是batch_size
+dataloader必须记住的四个参数(记住这四个就够了)：
+参数	            作用	        训练建议
+dataset	        数据来源	     必填
+batch_size      每批样本数	 32 / 64
+shuffle	        是否打乱	     True
+num_workers	    并行加载	     0~4
+注：一个epoch = 把整个训练集完整地用了一遍
+假设数据集有 10 个样本：
+[0,1,2,3,4,5,6,7,8,9]
+shuffle = True
+#epoch=1，第一个回合
+[3,7,1,9,0,4,8,2,6,5]   #打乱顺序
+#假设batch_size=3
+[3,7,1]
+[9,0,4]
+[8,2,6]
+[5]   # 最后一批（可能不满，这时由另一个参数drop_last决定是否舍去）
+下一个epoch打乱顺序得到的序列可能不一致，所以再切分的结果也就不一致
+
+23.dataloader会按batch_size对图片进行打包
+eg：输出单张图片
+print(img)  # torch.size([3,32,32])
+print(label)    # 3
+但经过dataloader打包之后(batch_size=4为例)：
+for data in test_loader:
+    img, label = data
+    print(img.shape)    #输出示例：torch.Size([4, 3, 32, 32])，表示4张图片，3通道，32*32
+    print(label)        #输出示例：tensor([6, 0, 0, 9])，表示这四张图片的标签分别为6，0,0,9
+可见test_loader中的一个元素实际上是四张图片打包在一起得到的(img,label分开打包在一起构成一个二元组)
+即一个dataloader元素 = (img包,label包)
+
+24."str{}".format()用法
+功能：动态生成字符串，{}作为占位符发挥作用，将传入format的参数插入到{}位置
+eg：for i in range(1,32)
+        print("2026.1.{}".format(i))
+依次输出2026.1.1，2026.1.2，...，2026.1.31
+
+25.debug：设置断点+点击小虫，可以看到程序是怎么一步步执行的，对于理不清程序逻辑来说特别有用
+
+26.nn.Module的使用
+torch.nn.Module是所有PyTorch神经网络模型的基类；
+自己搭建神经网络模型需要继承这个父类；
+继承之后必须重写__init__和forward两个方法
+__init__：
+用于初始化模型，定义层、参数（必须调用super().__init__()）
+super()是用来调用父类的方法的，在重写__init__方法时需用到，通过它来调用父类nn.Module的初始化方法
+forward:
+定义前向传播
+调用模型对象model(x)，自动执行forward(x)，无需手动调用
+示例：class MyModel(nn.Module):
+    def __init__(self):
+        super().__init__()       # 必须调用父类初始化
+        self.fc = nn.Linear(10, 1)
+
+    def forward(self, x):        # 必须重写forward
+        return self.fc(x)
+
+    my_model=MyModel()  #实例化对象（自己搭建的神经网络）
+
+27.重叠的有几个中括号就是几维矩阵
+示例：([[1,2,0,3,1],
+       [0,1,2,3,1]])    #二维矩阵
+
+28.PyTorch的卷积函数“F.conv2d”
+功能：对二维输入数据做卷积操作（二维卷积），常用于图像或特征图的特征提取
+F是给torch.nn.functional取的别名，import torch.nn.functional as F
+参数：F.conv2d(input,weight,bias,stride,padding,dilation,groups)
+参数比较多，调用的时候建议结合位置传参和关键字传参
+input：输入张量 (N, C_in, H, W)      # N：batch_size，C_in：通道数
+weight：卷积核 (C_out, C_in, K_h, K_w)  # C_out：输出通道数，C_in：输入通道数(必须与input一致)
+bias：偏置（可选）
+stride：步长
+padding：边缘补零，默认为0表示不补边缘
+后两个不常用，暂时省略，要用自己查
+
+
+
+
+
+
+
+
+
+
+
