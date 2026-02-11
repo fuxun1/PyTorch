@@ -184,6 +184,7 @@ eg：for i in range(1,32)
 
 25.debug：设置断点+点击小虫，可以看到程序是怎么一步步执行的，对于理不清程序逻辑来说特别有用
 
+搭建模型及常用的神经网络层
 26.nn.Module的使用
 torch.nn.Module是所有PyTorch神经网络模型的基类；
 自己搭建神经网络模型需要继承这个父类；
@@ -203,6 +204,8 @@ forward:
         return self.fc(x)
 
     my_model=MyModel()  #实例化对象（自己搭建的神经网络）
+注：在重写__init__方法时构建神经层(self.神经层名称=...)，但是不区分第几层
+第几层是在重写forward()的时候体现出来的，先计算的就是第一层，其次是第二层，依此类推
 
 27.重叠的有几个中括号就是几维矩阵
 示例：([[1,2,0,3,1],
@@ -216,9 +219,147 @@ F是给torch.nn.functional取的别名，import torch.nn.functional as F
 input：输入张量 (N, C_in, H, W)      # N：batch_size，C_in：通道数
 weight：卷积核 (C_out, C_in, K_h, K_w)  # C_out：输出通道数，C_in：输入通道数(必须与input一致)
 bias：偏置（可选）
-stride：步长
+stride：步长，单个数字x等价于(x,x),横向纵向走的步长都为x，如果stride=(1,2),则横向步长为1，纵向步长为2
 padding：边缘补零，默认为0表示不补边缘
 后两个不常用，暂时省略，要用自己查
+
+29.池化层操作
+对池化层操作，步长默认为池化核大小(kernel_size)
+ceil_mode=False     #向下取整
+ceil_mode=True      #向上取整
+from torch.nn import MaxPool2d      #导入对二维数据进行最大池化操作的工具
+MaxPool（最大池化）就是：在一个小窗口里，只保留“最强的那个响应”，把其余的都丢掉
+这时ceil_mode决定当边界部分不足小窗口大小时，数据保留还是舍弃
+注：在CNN（卷积神经网络）的池化操作里，最常用、最经典的就是：最大池化（MaxPool）
+目的：在尽量不丢失“关键信息”的前提下，压缩特征图，减小计算量，让模型更稳、更快、更泛化
+
+30.池化层输入input参数同卷积，也就是必须是四维张量，
+对于二维矩阵，可通过Reshape(-1,C,H,W)的方法转化为四维张量
+
+31.其实pytorch的输入几乎都是(N,C,H,W)格式
+Pytorch官网torch.nn模块中介绍了全部的神经层用法     #nn：neural network，神经网络
+
+32.线性层：Linear()
+两个重要参数：
+nn.Linear(in_features, out_features)表示：
+把一个长度为in_features的向量，映射成一个长度为out_features的新向量
+就是一个线性变换+偏置
+
+33.将图像展平，平铺成一行：reshape(input,[1,1,1,-1])
+更简单的方法：使用torch.flatten
+相当于一个手动设置一个调用工具自动转换
+后者更为常用
+
+34.补充tensorboard的工具：add_graph(model, input_to_model)
+功能：将模型的传播结构图画出来
+这是一个很实用的功能！
+
+35.常用的损失函数：
+L1Loss()：平均绝对误差
+参数reduction设置计算方式
+
+MSELoss：均方误差
+同样参数reduction设置计算方式
+
+CrossEntropyLoss()：交叉熵损失函数，用于分类问题
+输入数据格式为(N,Class)
+也有很多其他参数，可通过官方文档查看
+
+36.loss.backward()
+让PyTorch自动做“反向传播”，把loss对所有可训练参数的梯度算出来
+PyTorch会做三件事：
+沿着计算图反向走
+使用链式法则计算梯度
+把梯度存到.grad里
+注：它不会更新参数，只算梯度
+优化器来做更新参数的事情
+理解梯度：
+假设Loss对参数w求梯度，即求导
+a.梯度>0，增大w会让Loss变大，因此应该减小参数，更新参数的时候将w调小
+b.梯度<0，增大w会让Loss变小，因此应该增大参数，更新参数的时候将w调大
+优化器干的事情其实就是“往梯度反方向走”
+示例：w.grad = -24.3
+含义是：如果w增加1，loss大约减少24.3，相当于k·dx，从微分角度也好理解，不过实际上还会乘上学习率控制更新幅度
+
+37.优化器（optimizer()）
+反向传播求出梯度之后，通过优化器来更新参数，简单来说，优化器用来更新参数
+主要参数有：
+params（必须）：表示你要优化哪些参数，默认为全部参数
+lr（learning rate，学习率）
+
+38.完整训练流程
+1.清空上一轮的梯度（必须最先做）
+optimizer.zero_grad()
+2.前向传播
+outputs = model(inputs)
+3.计算损失
+loss = criterion(outputs, labels)
+4.反向传播（计算当前batch的梯度）
+loss.backward()
+5.参数更新（用刚算出来的梯度）
+optimizer.step()
+注：可以设置断点调试程序来看参数更新的过程，参数存储在"data"里面，梯度存储在"grad"里面
+
+现有网络模型的使用及修改
+39.VGG是一种经典的卷积神经网络，用于图像分类
+下载该模型的相关参数可自行前往PyTorch官网查询
+可以对下载的模型进行迁移学习，包括添加神经层，修改指定神经层、删除神经层等操作，可见model_pretrained.py文件
+
+40.模型的保存与读取
+模型的保存：有两种方式，即直接保存模型文件、以字典形式保存模型参数
+前者：torch.save(模型，保存路径+文件名)
+后者（官方推荐用法）：torch.save(模型.state_dict(),保存路径+文件名)；这种保存方式有助于节省空间
+对应的模型加载方式也有两种
+前者：model1 = torch.load(文件路径,weights_only=False)
+后者（麻烦一点，三步）：以vgg16为例
+    vgg16 = torchvision.models.vgg16(pretrained=False)      #加载获得初始模型结构
+    model2 = torch.load(文件路径)   #加载保存的模型参数
+    vgg16.load_state_dict(model2)   #将加载的模型参数放入到模型结构中，获得所需模型
+    "vgg16就变成了所需要的模型"，可通过print(vgg16)查看模型结构
+补充说明：通过方式1（前者）保存和加载自己搭建的模型时，如果只是按照上述方式进行，加载步骤其实会报错，
+需要把模型结构代码复制过来或者导包导入搭建模型的.py文件，确保程序能访问到该模型定义的方式，这样才不会报错
+注意：方式1在加载模型时需要设置"weights_only=False"参数关闭安全检查，所以建议只对自己存的文件进行此操作
+方式1的保存叫序列化，加载叫反序列化
+
+41.item()可以把tensor数据类型转换为普通数字
+
+42.分类问题的准确率计算（以二分类为例）
+outputs = ([[0.1,0.2],
+            [0.3,0.4]])
+outputs.argmax(1) = preds = [1][1]      #预测结果，也就是通过argmax返回最大值下标，参数控制方向，0按列找，1按行找
+targets = [0][1]    #目标结果
+(preds==targets).sum() = 1      #得到预测对的个数
+测试集上总的预测对的个数 / 测试集大小 = 正确率
+
+43.在标准训练模型流程中，训练之前会加一行代码“tudui.train()”，测试之前会加“tudui.eval()”
+二者的作用：其实只对某些特殊的层有用，也就是说如果模型中有这些特殊的层，那就必须写这两行代码，
+分别手动将模型设为训练模式和验证模式；但是不存在这些特殊层，这么写也没有任何问题
+
+44.可以通过导入time模块来计算模型训练花的时间
+time.time()：返回当前时间，将其设置在不同地方，差值即为中间过程花的时间
+
+45.如何调用GPU训练模型
+方式1：调用".cuda()"再返回即可
+作用对象：网络模型、数据（输入和标注）、损失函数
+eg：tudui = tudui.cuda()         loss = loss.cuda();
+    imgs = imgs.cuda();         targets = targets.cuda()
+注：更好的写法是在前面加上判断语句："if torch.cuda.is_available():"
+方式2（更常用）：device = torch.device("cuda")
+      作用对象.to(device)
+      """这样还可以指定显卡，如果电脑只有一张显卡，则device=torch.device("cuda:0")，
+      指定第二张显卡：device=torch.device("cuda:1")"""
+      作用的对象还是一样(模型、损失函数、数据)
+注：语法糖写法-->device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+46.可以用谷歌的GPU进行训练
+
+47.如果模型训练用的GPU，那么在验证的时候不要忘了将数据和加载的模型转到GPU
+或者在加载模型的时候设置参数map_location="cpu"，将其从GPU映射到CPU，这样就能直接将数据送到CPU了
+
+
+
+
+
 
 
 
